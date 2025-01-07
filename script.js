@@ -19,24 +19,35 @@ function parseCSVData(csvText) {
     }
   }
 
-  // Process only the data rows
-  return lines
-    .slice(startIndex + 1)
-    .map((line) => {
-      const values = line.split(",").map((val) => val.trim());
-      const date = values[0];
-      const hour = values[1];
-      const ontarioDemand = values[3]; // Ontario Demand is the fourth column
-      const timestamp = new Date(`${date}T${hour.padStart(2, "0")}:00:00`);
+  // Process data rows and group by date
+  const dailyData = new Map();
+
+  lines.slice(startIndex + 1).forEach((line) => {
+    const values = line.split(",").map((val) => val.trim());
+    const date = values[0];
+    const demand = parseFloat(values[3]); // Ontario Demand is the fourth column
+
+    if (!isNaN(demand)) {
+      if (!dailyData.has(date)) {
+        dailyData.set(date, []);
+      }
+      dailyData.get(date).push(demand);
+    }
+  });
+
+  // Calculate daily averages
+  return Array.from(dailyData.entries())
+    .map(([date, demands]) => {
+      const timestamp = new Date(`${date}T00:00:00`);
       return {
         date: date,
-        hour: parseInt(hour),
-        dayOfYear: getDayOfYear(timestamp) + parseInt(hour) / 24,
-        demand1: parseFloat(ontarioDemand), // Using Ontario Demand instead of Market Demand
+        dayOfYear: getDayOfYear(timestamp),
+        demand1: demands.reduce((sum, val) => sum + val, 0) / demands.length, // Average demand
         timestamp: timestamp,
       };
     })
-    .filter((item) => !isNaN(item.demand1) && !isNaN(item.timestamp.getTime()));
+    .filter((item) => !isNaN(item.demand1) && !isNaN(item.timestamp.getTime()))
+    .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 // Function to parse weather CSV data
@@ -77,30 +88,36 @@ function parseWeatherData(csvText) {
 }
 
 // Function to create the demand chart
-function createDemandChart(data2021, data2022, data2023) {
+function createDemandChart(
+  data2018,
+  data2019,
+  data2020,
+  data2021,
+  data2022,
+  data2023
+) {
   const ctx = document.getElementById("demandChart").getContext("2d");
+
+  // Combine all data into a single array and sort chronologically
+  const allData = [
+    ...data2018,
+    ...data2019,
+    ...data2020,
+    ...data2021,
+    ...data2022,
+    ...data2023,
+  ].sort((a, b) => a.timestamp - b.timestamp);
 
   new Chart(ctx, {
     type: "line",
     data: {
       datasets: [
         {
-          label: "2021 Demand",
-          data: data2021.map((d) => ({ x: d.dayOfYear, y: d.demand1 })),
-          borderColor: "rgb(255, 99, 132)",
-          borderWidth: 1,
-          pointRadius: 0,
-        },
-        {
-          label: "2022 Demand",
-          data: data2022.map((d) => ({ x: d.dayOfYear, y: d.demand1 })),
-          borderColor: "rgb(54, 162, 235)",
-          borderWidth: 1,
-          pointRadius: 0,
-        },
-        {
-          label: "2023 Demand",
-          data: data2023.map((d) => ({ x: d.dayOfYear, y: d.demand1 })),
+          label: "Historical Average Daily Demand",
+          data: allData.map((d) => ({
+            x: d.timestamp.getTime(),
+            y: d.demand1,
+          })),
           borderColor: "rgb(75, 192, 192)",
           borderWidth: 1,
           pointRadius: 0,
@@ -112,39 +129,44 @@ function createDemandChart(data2021, data2022, data2023) {
       plugins: {
         title: {
           display: true,
-          text: "Yearly Demand Comparison (Overlaid)",
+          text: "Historical Average Daily Demand (2018-2023)",
         },
         tooltip: {
           callbacks: {
             title: function (context) {
-              const dayOfYear = context[0].parsed.x;
-              const day = Math.floor(dayOfYear);
-              const hour = Math.round((dayOfYear - day) * 24);
-              return `Day ${day}, Hour ${hour}`;
+              const date = new Date(context[0].parsed.x);
+              return date.toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              });
             },
           },
+        },
+        legend: {
+          position: "right",
         },
       },
       scales: {
         x: {
-          type: "linear",
-          min: 1,
-          max: 365,
-          title: {
-            display: true,
-            text: "Day of Year",
-          },
-          ticks: {
-            stepSize: 30,
-            callback: function (value) {
-              return `Day ${value}`;
+          type: "time",
+          time: {
+            unit: "month",
+            displayFormats: {
+              month: "MMM yyyy",
             },
           },
+          title: {
+            display: true,
+            text: "Date",
+          },
+          min: new Date("2018-01-01").getTime(),
+          max: new Date("2023-12-31").getTime(),
         },
         y: {
           title: {
             display: true,
-            text: "Demand",
+            text: "Average Daily Demand (MW)",
           },
         },
       },
@@ -302,13 +324,10 @@ function populatePeakTable(data, year) {
       day: "numeric",
     });
 
-    // Format the hour with leading zero and proper suffix
-    const formattedHour = peak.hour.toString().padStart(2, "0") + ":00";
-
     row.innerHTML = `
       <td>${index + 1}</td>
       <td>${formattedDate}</td>
-      <td>${formattedHour}</td>
+      <td>Daily Average</td>
       <td>${Math.round(peak.demand1).toLocaleString()} MW</td>
     `;
 
@@ -376,70 +395,277 @@ function populatePredictionTable(predictions) {
   });
 }
 
-// Update the Promise.all section to include loading predictions
+// Function to create the historical weather chart
+function createHistoricalWeatherChart(
+  weatherData2018,
+  weatherData2019,
+  weatherData2020,
+  weatherData2021,
+  weatherData2022,
+  weatherData2023
+) {
+  const ctx = document
+    .getElementById("historicalWeatherChart")
+    .getContext("2d");
+
+  // Combine all weather data
+  const allWeatherData = [
+    ...weatherData2018,
+    ...weatherData2019,
+    ...weatherData2020,
+    ...weatherData2021,
+    ...weatherData2022,
+    ...weatherData2023,
+  ].sort((a, b) => a.date - b.date);
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      datasets: [
+        {
+          label: "Maximum Temperature (°C)",
+          data: allWeatherData.map((d) => ({
+            x: d.date.getTime(),
+            y: d.maxTemp,
+          })),
+          borderColor: "rgb(255, 99, 132)",
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+        },
+        {
+          label: "Minimum Temperature (°C)",
+          data: allWeatherData.map((d) => ({
+            x: d.date.getTime(),
+            y: d.minTemp,
+          })),
+          borderColor: "rgb(54, 162, 235)",
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: "Historical Temperature Data (2018-2023)",
+        },
+        legend: {
+          position: "right",
+        },
+      },
+      scales: {
+        x: {
+          type: "time",
+          time: {
+            unit: "month",
+            displayFormats: {
+              month: "MMM yyyy",
+            },
+          },
+          title: {
+            display: true,
+            text: "Date",
+          },
+          min: new Date("2018-01-01").getTime(),
+          max: new Date("2023-12-31").getTime(),
+        },
+        y: {
+          title: {
+            display: true,
+            text: "Temperature (°C)",
+          },
+          min: -30,
+          max: 35,
+        },
+      },
+    },
+  });
+}
+
+// Update the Promise.all section
 Promise.all([
+  // Demand data fetches
+  fetch("past_data/PUB_Demand_2018.csv").then((response) => response.text()),
+  fetch("past_data/PUB_Demand_2019.csv").then((response) => response.text()),
+  fetch("past_data/PUB_Demand_2020.csv").then((response) => response.text()),
   fetch("past_data/PUB_Demand_2021.csv").then((response) => response.text()),
   fetch("past_data/PUB_Demand_2022.csv").then((response) => response.text()),
   fetch("past_data/PUB_Demand_2023.csv").then((response) => response.text()),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_01.csv").then(
-    (response) => response.text()
+  // Historical weather data fetches
+  Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      fetch(
+        `2018_weather_data/en_climate_daily_ON_6158359_2018_P1D_${String(
+          i + 1
+        ).padStart(2, "0")}.csv`
+      )
+        .then((response) => response.text())
+        .catch(() => null)
+    )
   ),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_02.csv").then(
-    (response) => response.text()
+  Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      fetch(
+        `2019_weather_data/en_climate_daily_ON_6158359_2019_P1D_${String(
+          i + 1
+        ).padStart(2, "0")}.csv`
+      )
+        .then((response) => response.text())
+        .catch(() => null)
+    )
   ),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_03.csv").then(
-    (response) => response.text()
+  Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      fetch(
+        `2020_weather_data/en_climate_daily_ON_6158359_2020_P1D_${String(
+          i + 1
+        ).padStart(2, "0")}.csv`
+      )
+        .then((response) => response.text())
+        .catch(() => null)
+    )
   ),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_04.csv").then(
-    (response) => response.text()
+  Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      fetch(
+        `2021_weather_data/en_climate_daily_ON_6158359_2021_P1D_${String(
+          i + 1
+        ).padStart(2, "0")}.csv`
+      )
+        .then((response) => response.text())
+        .catch(() => null)
+    )
   ),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_05.csv").then(
-    (response) => response.text()
+  Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      fetch(
+        `2022_weather_data/en_climate_daily_ON_6158359_2022_P1D_${String(
+          i + 1
+        ).padStart(2, "0")}.csv`
+      )
+        .then((response) => response.text())
+        .catch(() => null)
+    )
   ),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_06.csv").then(
-    (response) => response.text()
+  Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      fetch(
+        `2023_weather_data/en_climate_daily_ON_6158359_2023_P1D_${String(
+          i + 1
+        ).padStart(2, "0")}.csv`
+      )
+        .then((response) => response.text())
+        .catch(() => null)
+    )
   ),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_07.csv").then(
-    (response) => response.text()
+  // 2024 weather data fetches
+  Promise.all(
+    Array.from({ length: 8 }, (_, i) =>
+      fetch(
+        `2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_${String(
+          i + 1
+        ).padStart(2, "0")}.csv`
+      ).then((response) => response.text())
+    )
   ),
-  fetch("2024_weather_data/en_climate_daily_ON_6158359_2024_P1D_08.csv").then(
-    (response) => response.text()
-  ),
+  // Predictions fetch
   fetch("predictions.json").then((response) => {
     console.log("Predictions response status:", response.status);
     return response.json();
   }),
-])
-  .then(([data2021, data2022, data2023, ...rest]) => {
-    const weatherFiles = rest.slice(0, -1);
-    const predictions = rest[rest.length - 1];
-
+]).then(
+  ([
+    data2018,
+    data2019,
+    data2020,
+    data2021,
+    data2022,
+    data2023,
+    weather2018Files,
+    weather2019Files,
+    weather2020Files,
+    weather2021Files,
+    weather2022Files,
+    weather2023Files,
+    weather2024Files,
+    predictions,
+  ]) => {
     console.log("Loaded predictions:", predictions);
 
+    // Parse demand data
+    const parsed2018 = parseCSVData(data2018);
+    const parsed2019 = parseCSVData(data2019);
+    const parsed2020 = parseCSVData(data2020);
     const parsed2021 = parseCSVData(data2021);
     const parsed2022 = parseCSVData(data2022);
     const parsed2023 = parseCSVData(data2023);
 
-    const weatherData = weatherFiles
+    // Parse historical weather data
+    const weather2018 = weather2018Files
+      .filter((f) => f !== null)
+      .map((file) => parseWeatherData(file))
+      .flat();
+    const weather2019 = weather2019Files
+      .filter((f) => f !== null)
+      .map((file) => parseWeatherData(file))
+      .flat();
+    const weather2020 = weather2020Files
+      .filter((f) => f !== null)
+      .map((file) => parseWeatherData(file))
+      .flat();
+    const weather2021 = weather2021Files
+      .filter((f) => f !== null)
+      .map((file) => parseWeatherData(file))
+      .flat();
+    const weather2022 = weather2022Files
+      .filter((f) => f !== null)
+      .map((file) => parseWeatherData(file))
+      .flat();
+    const weather2023 = weather2023Files
+      .filter((f) => f !== null)
+      .map((file) => parseWeatherData(file))
+      .flat();
+
+    // Parse 2024 weather data
+    const weatherData2024 = weather2024Files
       .map((file) => parseWeatherData(file))
       .flat()
       .sort((a, b) => a.date - b.date);
 
     console.log("Creating charts...");
     // Create charts
-    createDemandChart(parsed2021, parsed2022, parsed2023);
-    createWeatherChart(weatherData);
+    createDemandChart(
+      parsed2018,
+      parsed2019,
+      parsed2020,
+      parsed2021,
+      parsed2022,
+      parsed2023
+    );
+    createHistoricalWeatherChart(
+      weather2018,
+      weather2019,
+      weather2020,
+      weather2021,
+      weather2022,
+      weather2023
+    );
+    createWeatherChart(weatherData2024);
     console.log("Creating prediction chart with data:", predictions);
     createPredictionChart(predictions);
 
     console.log("Populating tables...");
     // Populate peak tables
+    populatePeakTable(parsed2018, 2018);
+    populatePeakTable(parsed2019, 2019);
+    populatePeakTable(parsed2020, 2020);
     populatePeakTable(parsed2021, 2021);
     populatePeakTable(parsed2022, 2022);
     populatePeakTable(parsed2023, 2023);
     populatePredictionTable(predictions);
-  })
-  .catch((error) => {
-    console.error("Error loading data:", error);
-    console.error("Stack trace:", error.stack);
-  });
+  }
+);

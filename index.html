@@ -52,21 +52,38 @@
         <canvas id="demandChart"></canvas>
       </div>
       <div class="chart-container">
+        <canvas id="historicalWeatherChart"></canvas>
+      </div>
+      <div class="chart-container">
         <canvas id="weatherChart"></canvas>
       </div>
       <div class="chart-container">
         <canvas id="predictionChart"></canvas>
       </div>
       <div class="table-container">
-        <h2>Top 10 Peak Demand Hours</h2>
+        <h2>Top 10 Peak Demand Days</h2>
         <div class="year-section">
-          <h3>2021</h3>
-          <table id="peaks2021">
+          <h3>2024 Predicted Peaks</h3>
+          <table id="peaks2024">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Day of Year</th>
+                <th>Day of Week</th>
+                <th>Predicted Demand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="year-section">
+          <h3>2023</h3>
+          <table id="peaks2023">
             <thead>
               <tr>
                 <th>Rank</th>
                 <th>Date</th>
-                <th>Hour</th>
+                <th>Type</th>
                 <th>Demand</th>
               </tr>
             </thead>
@@ -80,7 +97,7 @@
               <tr>
                 <th>Rank</th>
                 <th>Date</th>
-                <th>Hour</th>
+                <th>Type</th>
                 <th>Demand</th>
               </tr>
             </thead>
@@ -88,13 +105,13 @@
           </table>
         </div>
         <div class="year-section">
-          <h3>2023</h3>
-          <table id="peaks2023">
+          <h3>2021</h3>
+          <table id="peaks2021">
             <thead>
               <tr>
                 <th>Rank</th>
                 <th>Date</th>
-                <th>Hour</th>
+                <th>Type</th>
                 <th>Demand</th>
               </tr>
             </thead>
@@ -102,14 +119,42 @@
           </table>
         </div>
         <div class="year-section">
-          <h3>2024 Predicted Peaks</h3>
-          <table id="peaks2024">
+          <h3>2020</h3>
+          <table id="peaks2020">
             <thead>
               <tr>
                 <th>Rank</th>
-                <th>Day of Year</th>
-                <th>Day of Week</th>
-                <th>Predicted Demand</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Demand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="year-section">
+          <h3>2019</h3>
+          <table id="peaks2019">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Demand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="year-section">
+          <h3>2018</h3>
+          <table id="peaks2018">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Demand</th>
               </tr>
             </thead>
             <tbody></tbody>
