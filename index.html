@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+      .container {
+        width: 90%;
+        margin: 20px auto;
+      }
+      .chart-container {
+        margin-bottom: 40px;
+      }
+      canvas {
+        background-color: white;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        margin-bottom: 40px;
+      }
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border: 1px solid #ddd;
+      }
+      th {
+        background-color: #f4f4f4;
+        font-weight: bold;
+      }
+      .table-container {
+        margin-top: 40px;
+      }
+      .year-section {
+        margin-bottom: 30px;
+      }
+      h2 {
+        color: #333;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="chart-container">
+        <canvas id="demandChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="weatherChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <canvas id="predictionChart"></canvas>
+      </div>
+      <div class="table-container">
+        <h2>Top 10 Peak Demand Hours</h2>
+        <div class="year-section">
+          <h3>2021</h3>
+          <table id="peaks2021">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Date</th>
+                <th>Hour</th>
+                <th>Demand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="year-section">
+          <h3>2022</h3>
+          <table id="peaks2022">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Date</th>
+                <th>Hour</th>
+                <th>Demand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="year-section">
+          <h3>2023</h3>
+          <table id="peaks2023">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Date</th>
+                <th>Hour</th>
+                <th>Demand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="year-section">
+          <h3>2024 Predicted Peaks</h3>
+          <table id="peaks2024">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Day of Year</th>
+                <th>Day of Week</th>
+                <th>Predicted Demand</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>
